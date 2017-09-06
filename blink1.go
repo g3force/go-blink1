@@ -53,10 +53,46 @@ func OpenNextDevice() (device *Device, err error) {
 	return
 }
 
+func AllDevices() (devices map[string]libusb.Info) {
+	// Refresh
+	libusb.Init()
+
+	devices = map[string]libusb.Info{}
+	for _, dev := range libusb.Enum() {
+		if dev.Vid == USBVendorID && dev.Pid == USBProductID {
+			devices[dev.Device] = dev
+		}
+	}
+	return
+}
+
 // Close communication channel to Blink(1)
 func (b *Device) Close() {
 	delete(openDevices, b.Device.Device)
 	_ = b.Device.Close()
+}
+
+// Check if device is still plugged in
+func (b *Device) IsPluggedIn() (bool) {
+	allDevices := AllDevices()
+	_, ok := allDevices[b.Device.Device]
+	return ok
+}
+
+func CloseUnpluggedDevices() {
+	for _, dev := range openDevices {
+		if !dev.IsPluggedIn() {
+			dev.Close()
+		}
+	}
+}
+
+func OpenDevices() (devices []*Device) {
+	CloseUnpluggedDevices()
+	for _, dev := range openDevices {
+		devices = append(devices, dev)
+	}
+	return
 }
 
 // SetState sets the blink(1) to a specific state
