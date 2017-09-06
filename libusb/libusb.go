@@ -94,6 +94,8 @@ func Open(vid, pid int, device string) *Device {
 				int(dev.descriptor.idProduct) == pid &&
 				C.GoString(&dev.filename[0]) == device {
 				h := C.usb_open(dev)
+				// on linux, detaching kernel driver is necessary
+				C.usb_detach_kernel_driver_np(h, 0)
 				rdev := &Device{
 					&Info{
 						C.GoString(&bus.dirname[0]),
